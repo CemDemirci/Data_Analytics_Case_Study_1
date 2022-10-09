@@ -1,0 +1,384 @@
+---
+title: "Case_Study_1"
+author: "Cem Demirci"
+date: "2022-10-08"
+output:
+  html_document: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Case Study : How Does a Bike-Share Navigate Speedy Success?
+### Introduction
+In this case study, we are working as a junior data analyst working for a fictional, Cyclistic. We will follow these steps to answer the business questions;
+
+* Ask
+* Prepare
+* Process
+* Analysis
+* Share
+* Act
+
+as taught in the course.
+
+### Scenario
+The director of the marketing team, Lily Moreno, believes that maximizing the number of annual members is important for company's future success. Therefore, our team wants to understand **how casual riders and annual members use Cyclistic bikes differently**. Using these insights, a new marketing strategy will be used to convert causal riders into annual members.
+
+### ASK
+#### A Clear Statement of the Business Task
+**Cyclistic’s finance analysts have concluded that annual members are much more profitable than casual riders. Although the pricing flexibility helps Cyclistic attract more customers, Moreno believes that maximizing the number of annual members will be key to future growth**. It is believed that there is no need for any other marketing campaign, casual riders are already aware of the Cyclistic program, therefore the goal is to convert casual riders into annual members using insights.
+
+### PREPARE
+#### 1. Where is your data located?
+The data is uploaded in RStudio interface, where we can use r programming language as well as other programming languages to easily manipulate related documents and information regarding to bike ride data. I have decided to use r programming for this analysis.
+
+#### 2. How is data organised?
+The data is segregated by quarters of years 2013 to 2018 and months including the years from 2020 to 2022 as CSV files.
+
+#### 3. Are there issues with bias or credibility in this data? Does your data ROCCC?
+Since the data is directly collected from the customers, it seems that there is no issue regarding to bias credibility. The data is reliable, original, comprehensive, current and also cited therefore the rocccs.
+
+#### 4. How are you addressing licensing, privacy, security, and accessibility?
+The data has been made available by Motivate International Inc. under this license (https://ride.divvybikes.com/data-license-agreement). No personal identifiable information including credit card numbers provided regarding to riders in the files. The data set do not contain private information, therefore provides privacy and security on riders.
+
+#### 5. How did you verify the data’s integrity?
+* All data has same amount of columns with identical columns. 
+* The data is consistent across the years and provided as csv file type. 
+* The data contains all the required information regarding to rides.
+
+#### 6. How does it help you answer your question?
+The data provides all the necessary information regarding to rides including dates, times, bike types, customer types, start and end locations and so on. Using these information, I have created new attributes to further analyze existing data. This allowed me to see relationships between riders (annual and casual riders). I believe that these outcomes will be useful the make final business decisions.
+
+#### 7. Are there any problems with the data?
+There were NA values, which I have removed. Also there were test rides of company as well which are removed too.
+
+### PROCESS
+
+#### 1. What tools are you choosing and why?
+I have downloaded files between 04.2020 and 03.2021 for this case study. Since there were enormous ride data, literally millions of rows, it would be hard to make necessary adjustment in Microsoft Excel. Therefore I have decided to manipulate the data using r programming language within RStudio.
+
+#### 2. Have you ensured your data’s integrity? 
+* The data is complete: It contains all the required components for analysis.
+* The data is consistent: Files are organized in an equal number of columns and same data types
+* Its credibility was proven above. It is also trustworthy.
+
+#### 3. What steps have you taken to ensure that your data is clean?
+* I have concatenated all twelve csv files into one data frame.
+* I have checked if there are duplicated values. There were not.
+* I have removed all the NA values.
+* I have checked if there are irrelevant values and removed them all.
+* I have checked unique variables to see misspelling errors.
+
+#### 4. How can you verify that your data is clean and ready to analyze?
+* Removed start_lat, start_lng, end_lat and end_lng from the table since these columns are not necessary.
+* Changed names of some columns for better readability.
+* mutate() for creating new attributes using existing ones and remove irrelevant values out of it.
+* duplicate() for removing duplicated values.
+* na.omit() for removing NA values
+* count() to check further irrelevant values or attributes.
+* filter() to see any missing or irrelevant values.
+* subset() for checking test rides of company.
+* format() for formatting dates into days,months and hours.
+* factor() for reordering months and days.
+
+#### 5. Have you documented your cleaning process so you can review and share those results?
+Here are the steps I have covered during the cleaning process:
+
+First thing is first. Lets load the required packages.
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+```
+
+I also required additional packages during the analysis phase so I would like to include them here as well. But note that these would not be necessary for your own study.
+
+```{r}
+library(dplyr)
+library(readr)
+library(lubridate)
+library(data.table)
+library(chron)
+```
+
+1. Downloaded all the relevant csv files into same file. After that, concatenate csv files into one data frame.
+
+```{r}
+data_all <- list.files(path = "C:/Users/cem_d/Desktop/Google_Data_Analytics_Certificate/Case_Study_1/tripdata_202004_202103",
+                       pattern = "*.csv", full.names = TRUE) %>%
+  lapply(read_csv) %>%
+  plyr::rbind.fill()
+```
+
+2. Remove NA values.
+
+```{r}
+data_all<-na.omit(data_all)
+```
+
+3. Remove start_lat, start_lng, end_lat and end_lng from data frame.
+
+```{r}
+data_all_1 <- data_all %>% 
+  select(-start_lat,-start_lng,-end_lat,-end_lng)
+```
+
+4. Remove empty rows or columns.
+
+```{r}
+data_all_2 <- remove_empty(data_all_1, which = c("rows", "cols"))
+count(filter(data_all_2, start_station_name==" "),
+      start_station_name, start_station_id, end_station_name, end_station_id)
+```
+
+5. Check rideable_type values.
+
+```{r}
+data_all_2 %>% 
+  count(rideable_type)
+```
+
+6. Rename column names for readability.
+
+```{r}
+data_all_3 <- rename(data_all_2, rider_type=member_casual, start_time=started_at,
+                     end_time=ended_at, bike_type=rideable_type)
+```
+
+7. Create new column for duration of rides.
+
+```{r}
+data_all_4 <- data_all_3 %>%
+  mutate(duration_ride=as.double(end_time-start_time)/60)
+```
+
+8. Check if the duration is smaller than 0.
+
+```{r}
+nrow(subset(data_all_4, duration_ride < 0))
+```
+
+9. Remove all the rows where duration ride is smaller than 0.
+
+```{r}
+data_all_5<-data_all_4[!(data_all_4$duration_ride<0),]
+```
+
+10. Create new columns (day, month, time) for future analysis.
+
+```{r}
+data_all_5$day<-format(data_all_5$start_time,"%a")
+
+data_all_5$month<-format(data_all_5$start_time,"%b-%Y")
+
+data_all_5$hour<-as.integer(format(data_all_5$start_time,"%H"))
+```
+
+11. Check if there are any duplicated rows.
+
+```{r}
+data_all_5<-data_all_5[!duplicated(data_all_5$ride_id),]
+```
+
+12. I have recognized some test rides made by the company. Lets see how many...
+
+```{r}
+nrow(subset(data_all_5, start_station_name %like% "TEST"))
+nrow(subset(data_all_5, end_station_name %like% "TEST"))
+```
+ 
+13. Removing those test rides from the data set as well.
+
+```{r}
+data_all_5<-data_all_5[!(data_all_5$start_station_name %like% "TEST"),]
+data_all_5<-data_all_5[!(data_all_5$end_station_name %like% "TEST"),]
+```
+
+14. I have to reorder days and months so that these will be seen as ordered in visualizations.
+
+```{r}
+data_all_5$month<-factor(data_all_5$month,levels = c("Apr-2020", "May-2020", "Jun-2020", 
+                                        "Jul-2020","Aug-2020", "Sep-2020", "Oct-2020",
+                            "Nov-2020", "Dec-2020", "Jan-2021", "Feb-2021", "Mar-2021"))
+
+data_all_5$day<-factor(data_all_5$day,levels = c("Mon","Tue","Wed","Thu","Fri","Sat","Sun"))
+```
+
+15. Done with cleaning process. Creating the final document as data_bike.
+
+```{r}
+data_bike<-data_all_5
+```
+
+###ANALYZE & SHARE
+
+Now, our data is ready for analysis. The analysis will help us to gain insights on how the causal riders and annual members are differ.
+
+1. Lets see the number of casual riders and annual member and compare them.
+
+```{r}
+df<-data_bike %>% 
+  group_by(rider_type) %>% 
+  summarize(count=length(rider_type),
+            percentage_of_total=(length(rider_type)/nrow(data_bike))*100)
+
+df
+```
+
+From the created table, we can see that %59 of the total riders are the actual members and %41 of them are casual ones. Lets plot the relationship between them.
+
+```{r}
+plot_1<-ggplot(df, aes(x=rider_type,y=percentage_of_total,color=rider_type,fill=rider_type))+
+  geom_bar(stat = "identity")+
+  geom_text(aes(label=round(percentage_of_total,digits = 2)),vjust=1.5,size=4,color="black")+
+  labs(y="% of Total",x="Rider Type",title = "Percentage of Bike Riders")+
+  theme(legend.position = "none")
+
+plot_1
+```
+
+2. Now lets compare riders by months.
+
+```{r}
+df2<-data_bike %>% 
+  group_by(rider_type, month) %>% 
+  summarise(number_of_riders=length(month),as_percentage=length(month)/nrow(data_bike)*100) %>% 
+  arrange(desc(number_of_riders))
+
+df2
+```
+```{r}
+plot_2<-ggplot(df2,aes(x=month,y=number_of_riders, fill=rider_type))+
+  geom_col(width = 0.4,position = position_dodge(width = 0.4))+
+  theme(axis.text.x=element_text(size=8, angle = 90))+
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+plot_2
+
+```
+
+The plot shows us that both casual riders and annual members mostly ride during the summer season and rides are dramatically decreased for both users through autumn and cold season. It is clearly customers prefer better weather quality to ride bikes. Therefore, in order to convert casual riders into annual members, all the marketing campaigns should be launched in between spring and summer seasons in order to attract more casual members.
+
+3. I have also compared riders by the days of the week.
+
+```{r}
+df3<-data_bike %>% 
+  group_by(rider_type,day) %>% 
+  summarise(number_of_riders=length(day),
+            percentage_by_day=length(day)/nrow(data_bike)*100) %>% 
+  arrange(desc(number_of_riders))
+
+df3
+```
+```{r}
+plot_3<-ggplot(df3,aes(x=day,y=number_of_riders,fill=rider_type))+
+  geom_col(width = 0.4,position = position_dodge(width = 0.4))+
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+plot_3
+```
+
+From the above graph, casual members are mostly busy on Saturdays and don't use bike services in weekdays compared to weekends.Interestingly, the trip number of annual riders is almost constant through days.
+
+4.What about comparing annual members and casual riders on a hourly basis? Let's see what we got here...
+
+```{r}
+df4<-data_bike %>%
+  group_by(rider_type,hour) %>% 
+  summarise(number_of_trips=n())
+
+df4
+```
+```{r}
+plot_4<-ggplot(df4,aes(x=hour,y=number_of_trips,color=rider_type))+
+  geom_line()+
+  theme(axis.text.x = element_text(angle = 90))+
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))+
+  scale_x_continuous(breaks = c(0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,
+                                19,20,21,22,23))
+
+plot_4
+```
+
+For the members, there are two distinct peak hours 8 AM and 5 PM which is also coinciding with the peak demand of casual riders. Seems like office workers are the majority of the people demanding bike share services in morning and evening hours.
+
+5. Now, let's divide hours into mornings, evenings and afternoons.
+
+```{r}
+df5<-data_bike %>%
+  mutate(day_time=ifelse(hour<12,"Morning",
+                  ifelse(hour>=12 & hour<19,"Afternoon", "Evening"))) %>% 
+  group_by(rider_type,day_time) %>% 
+  summarise(number_of_trips=length(rider_type)) %>% 
+  arrange(desc(number_of_trips))
+
+df5
+```
+```{r}
+plot_5<-ggplot(df5,aes(x=day_time,y=number_of_trips,fill=rider_type))+
+  geom_col(width = 0.4,position = position_dodge(width = 0.4))+
+  theme(axis.text.x = element_text(angle = 90))+
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+plot_5
+```
+
+All the members prefer riding bikes afternoon mostly.
+
+6. Let's compare how different bike types are used by customers.
+```{r}
+df6<-data_bike %>%
+  group_by(rider_type,bike_type) %>%
+  summarise(number_of_trips=n()) %>% 
+  arrange(desc(number_of_trips))
+
+df6
+```
+
+```{r}
+plot_6<-ggplot(df6,aes(x=bike_type,y=number_of_trips,fill=rider_type))+
+  geom_col(width = 0.4,position = position_dodge(width = 0.4))+
+  theme(axis.text.x = element_text(angle = 45))+
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE))
+
+plot_6
+```
+
+Apparently, all customers tend to ride docked bike type over the others.As it can be seen, classic bikes and electric bikes almost shares the same amount of usage for actual members which is significantly less compared to docked bike usage. Seems like customers prefer docked bikes over the others maybe due to easy use of this bike type since it offers more comfort
+during ride. Still, we need more data related to fleet to make more relevant assumptions.
+
+### ACT
+ Based on my analysis
+* The population of annual members are more than casual members. %59 of the customers are annual members whereas %41 of them are casual riders. According to past 12 months' data, comparing these values, almost half of the whole costumers are casual members.
+* The number of customers using the bike share services increases through summer season and decreases through fall season. The members are more in percent than casual rider.
+* Casual riders prefer using bike share services more during weekends and members are use them constantly over entire week.
+* Members are cycling mostly at 8 AM and 5 PM, during the rush hours, and casual members tend to use services mostly at 5 PM.
+* Both customers are choosing afternoons for riding.
+* Docked bikes are being used more compared to other types by all customer types.
+
+### MY RECOMMENDATIONS
+* Offer discounts in summer seasons to attract more casual riders.
+* Increasing price for casual riders could be an effective strategy to convert them into annual members.
+* Offer discounted prices during none busy hours to target casual riders.
+* Provide additional offers for people who are registering in fall season.
+* Provide discounts or special offers in the afternoons for casual members who are willing to convert their membership. This would attract them to convert their membership.
+* Limit the distance of casual members can travel.
+
+### ADDITIONAL DATA REQUIRED
+* Age and gender of customers: These information could be used to make further study on how to attract more customers based on different profiles.
+* Occupation of customers: This information could be used to attract more people under same occupation.
+* Address information: To examine how location parameters would effects the demand on bike share services.
+
+### RESORUCES
+* GitHub
+* Kaggle
+* Stackoverflow
+
+
+
+
+
+

@@ -3,8 +3,8 @@ title: "Case_Study_1"
 author: "Cem Demirci"
 date: "2022-10-08"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -349,6 +349,83 @@ plot_6
 
 Apparently, all customers tend to ride docked bike type over the others.As it can be seen, classic bikes and electric bikes almost shares the same amount of usage for actual members which is significantly less compared to docked bike usage. Seems like customers prefer docked bikes over the others maybe due to easy use of this bike type since it offers more comfort
 during ride. Still, we need more data related to fleet to make more relevant assumptions.
+
+7. Let's see most popular locations for starting a bike ride! First creating a new data frame for locations. Then choosing top 10 famous locations for rides as shown below. I will also add Chicago map to better visualize density of start locations and end locations.
+
+7.1. Start Locations...
+```{r}
+location_data<-data_bike %>% 
+  group_by(start_station_name, start_lat, start_lng) %>% 
+  summarise(count=length(start_station_name)) %>% 
+  arrange(desc(count))
+
+location_data
+```
+```{r}
+popular_locations<-head(location_data,10)
+
+popular_locations$start_station_name<-factor(popular_locations$start_station_name, 
+                                             levels = popular_locations$start_station_name[order(popular_locations$count)])
+
+locations<-ggplot(popular_locations,aes(x=count,y=start_station_name))+
+  geom_bar(stat = "identity")
+
+locations
+```
+```{r}
+chicago <- get_stamenmap(bbox = c(left = -88.0225, bottom = 41.5949, 
+                                  right = -87.2713, top = 42.0677), 
+                         zoom = 10)
+
+chicago_map <- ggmap(chicago)
+
+a<-chicago_map+geom_point(aes(x = start_lng, y = start_lat), data = location_data, 
+                          size = 1, alpha=1)+labs(title = "Start Locations")
+
+b<-chicago_map+stat_density_2d(aes(x=start_lng, y=start_lat, fill = ..level..),
+                               data = location_data, geom = "polygon", alpha =.5)+ 
+  scale_fill_gradient(low = "yellow", high = "red")+labs(title = "Density")
+
+a+b
+```
+
+7.2. End Locations...
+
+```{r}
+location_data_1<-data_bike %>% 
+  group_by(end_station_name, end_lat,end_lng) %>% 
+  summarise(count=length(end_station_name)) %>% 
+  arrange(desc(count))
+
+location_data_1
+```
+```{r}
+popular_locations_2<-head(location_data_1,10)
+
+popular_locations_2$end_station_name<-factor(popular_locations_2$end_station_name, 
+                                             levels = popular_locations_2$end_station_name[order(popular_locations_2$count)])
+
+locations_2<-ggplot(popular_locations_2,aes(x=count,y=end_station_name))+
+  geom_bar(stat = "identity")
+
+locations_2
+```
+```{r}
+chicago <- get_stamenmap(bbox = c(left = -88.0225, bottom = 41.5949, 
+                                  right = -87.2713, top = 42.0677), 
+                         zoom = 10)
+
+chicago_map <- ggmap(chicago)
+
+c<-chicago_map+geom_point(aes(x = end_lng, y = end_lat), data = location_data_1, 
+                          size = 1, alpha=1)+labs(title = "End Locations")
+
+d<-chicago_map+stat_density_2d(aes(x=end_lng, y=end_lat, fill = ..level..),
+                               data = location_data_1, geom = "polygon", alpha =.5)+ 
+  scale_fill_gradient(low = "yellow", high = "red")+labs(title = "Density")
+
+c+d
+```
 
 ### ACT
  Based on my analysis

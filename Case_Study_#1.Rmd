@@ -3,8 +3,8 @@ title: "Case_Study_1"
 author: "Cem Demirci"
 date: "2022-10-08"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -426,6 +426,22 @@ d<-chicago_map+stat_density_2d(aes(x=end_lng, y=end_lat, fill = ..level..),
 
 c+d
 ```
+8. Finally, let's see most popular routes people choose.
+```{r}
+travel<-data_bike %>%
+  select(start_station_name,start_lat,start_lng,end_station_name,end_lat,end_lng,rider_type) 
+
+travel$route<-paste(travel$start_station_name,travel$end_station_name,sep="--->")
+
+travel<-travel %>%
+  group_by(route,rider_type) %>% 
+  summarise(count=length(route)) %>%
+  arrange(desc(count))
+
+travel
+```
+
+According to the table created, casual costumers highly prefer places where museums, theaters, parks, piers, lakes and any other attractions are located. Therefore, it would be beneficial to attract more annual riders by offering discounts on tickets for casual riders who are willing to convert their memberships. 
 
 ### ACT
  Based on my analysis

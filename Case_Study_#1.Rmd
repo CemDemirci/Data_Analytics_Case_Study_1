@@ -4,6 +4,7 @@ author: "Cem Demirci"
 date: "2022-10-08"
 output:
   html_document: default
+  word_document: default
   pdf_document: default
 ---
 ```{r setup, include=FALSE}
@@ -72,7 +73,6 @@ I have downloaded files between 04.2020 and 03.2021 for this case study. Since t
 * I have checked unique variables to see misspelling errors.
 
 #### 4. How can you verify that your data is clean and ready to analyze?
-* Removed start_lat, start_lng, end_lat and end_lng from the table since these columns are not necessary.
 * Changed names of some columns for better readability.
 * mutate() for creating new attributes using existing ones and remove irrelevant values out of it.
 * duplicate() for removing duplicated values.
@@ -102,6 +102,9 @@ library(readr)
 library(lubridate)
 library(data.table)
 library(chron)
+library(ggmap)
+library(maps)
+library(patchwork)
 ```
 
 1. Downloaded all the relevant csv files into same file. After that, concatenate csv files into one data frame.
@@ -119,101 +122,98 @@ data_all <- list.files(path = "C:/Users/cem_d/Desktop/Google_Data_Analytics_Cert
 data_all<-na.omit(data_all)
 ```
 
-3. Remove start_lat, start_lng, end_lat and end_lng from data frame.
+3. Remove empty rows or columns.
 
 ```{r}
-data_all_1 <- data_all %>% 
-  select(-start_lat,-start_lng,-end_lat,-end_lng)
-```
-
-4. Remove empty rows or columns.
-
-```{r}
-data_all_2 <- remove_empty(data_all_1, which = c("rows", "cols"))
-count(filter(data_all_2, start_station_name==" "),
+data_all_1 <- remove_empty(data_all, which = c("rows", "cols"))
+count(filter(data_all_1, start_station_name==" "),
       start_station_name, start_station_id, end_station_name, end_station_id)
 ```
+checked.
 
 5. Check rideable_type values.
 
 ```{r}
-data_all_2 %>% 
+data_all_1 %>% 
   count(rideable_type)
 ```
 
 6. Rename column names for readability.
 
 ```{r}
-data_all_3 <- rename(data_all_2, rider_type=member_casual, start_time=started_at,
+data_all_2 <- rename(data_all_1, rider_type=member_casual, start_time=started_at,
                      end_time=ended_at, bike_type=rideable_type)
 ```
 
 7. Create new column for duration of rides.
 
 ```{r}
-data_all_4 <- data_all_3 %>%
+data_all_3 <- data_all_2 %>%
   mutate(duration_ride=as.double(end_time-start_time)/60)
 ```
 
 8. Check if the duration is smaller than 0.
 
 ```{r}
-nrow(subset(data_all_4, duration_ride < 0))
+nrow(subset(data_all_3, duration_ride < 0))
 ```
 
 9. Remove all the rows where duration ride is smaller than 0.
 
 ```{r}
-data_all_5<-data_all_4[!(data_all_4$duration_ride<0),]
+data_all_4<-data_all_3[!(data_all_3$duration_ride<0),]
 ```
 
 10. Create new columns (day, month, time) for future analysis.
 
 ```{r}
-data_all_5$day<-format(data_all_5$start_time,"%a")
+data_all_4$day<-format(data_all_4$start_time,"%a")
 
-data_all_5$month<-format(data_all_5$start_time,"%b-%Y")
+data_all_4$month<-format(data_all_4$start_time,"%b-%Y")
 
-data_all_5$hour<-as.integer(format(data_all_5$start_time,"%H"))
+data_all_4$hour<-as.integer(format(data_all_4$start_time,"%H"))
 ```
 
 11. Check if there are any duplicated rows.
 
 ```{r}
-data_all_5<-data_all_5[!duplicated(data_all_5$ride_id),]
+data_all_4<-data_all_4[!duplicated(data_all_4$ride_id),]
 ```
 
 12. I have recognized some test rides made by the company. Lets see how many...
 
 ```{r}
-nrow(subset(data_all_5, start_station_name %like% "TEST"))
-nrow(subset(data_all_5, end_station_name %like% "TEST"))
+nrow(subset(data_all_4, start_station_name %like% "TEST"))
 ```
- 
+
+```{r}
+nrow(subset(data_all_4, end_station_name %like% "TEST"))
+```
+
 13. Removing those test rides from the data set as well.
 
 ```{r}
-data_all_5<-data_all_5[!(data_all_5$start_station_name %like% "TEST"),]
-data_all_5<-data_all_5[!(data_all_5$end_station_name %like% "TEST"),]
+data_all_4<-data_all_4[!(data_all_4$start_station_name %like% "TEST"),]
+data_all_4<-data_all_4[!(data_all_4$end_station_name %like% "TEST"),]
 ```
 
 14. I have to reorder days and months so that these will be seen as ordered in visualizations.
 
 ```{r}
-data_all_5$month<-factor(data_all_5$month,levels = c("Apr-2020", "May-2020", "Jun-2020", 
+data_all_4$month<-factor(data_all_4$month,levels = c("Apr-2020", "May-2020", "Jun-2020", 
                                         "Jul-2020","Aug-2020", "Sep-2020", "Oct-2020",
                             "Nov-2020", "Dec-2020", "Jan-2021", "Feb-2021", "Mar-2021"))
 
-data_all_5$day<-factor(data_all_5$day,levels = c("Mon","Tue","Wed","Thu","Fri","Sat","Sun"))
+data_all_4$day<-factor(data_all_4$day,levels = c("Mon","Tue","Wed","Thu","Fri","Sat","Sun"))
 ```
 
 15. Done with cleaning process. Creating the final document as data_bike.
 
 ```{r}
-data_bike<-data_all_5
+data_bike<-data_all_4
 ```
 
-###ANALYZE & SHARE
+### ANALYZE & SHARE
 
 Now, our data is ready for analysis. The analysis will help us to gain insights on how the causal riders and annual members are differ.
 
